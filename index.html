@@ -651,6 +651,9 @@ function safeName(value) {
   if (!v || /^\.+$/.test(v)) v = "key";
   return v.slice(0, 64);
 }
+function shellQuote(value) {
+  return "'" + String(value).replace(/'/g, "'\\''") + "'";
+}
 function copyText(text, msg) {
   if (!text) return;
   const ok = () => toast(msg || "已复制");
@@ -1221,7 +1224,9 @@ function keyBaseName() {
 function refreshAllCmd() {
   if (!current) return;
   const kb = keyBaseName();
-  const base = `ssh-copy-id -i "${kb}.pub" 用户@服务器地址 && ssh -i "${kb}" -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no 用户@服务器地址 'printf "登录验证成功，当前用户: "; whoami'`;
+  const pubfile = shellQuote(kb + ".pub");
+  const privfile = shellQuote(kb);
+  const base = `ssh-copy-id -i ${pubfile} 用户@服务器地址 && ssh -i ${privfile} -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no 用户@服务器地址 'printf "登录验证成功，当前用户: "; whoami'`;
   const pw = $("sshPassInput").value;
   $("allCmd").textContent = pw
     ? `sshpass -p '${pw.replace(/'/g, `'\\''`)}' ${base}`
