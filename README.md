@@ -16,30 +16,36 @@
 ```
 ssh-key-studio/
 ├── index.html     # 网页本体（单文件，加密/ZIP 库已内联）
-├── compose.yml    # Docker Compose 编排（对外 7788）
+├── compose.yaml   # Docker Compose 编排（对外 7788）
+├── Dockerfile     # 静态站点镜像（nginx:1.27-alpine）
 ├── nginx.conf     # 静态站点配置（含安全响应头）
-├── deploy.sh      # 一键部署脚本
+├── install.sh     # 一键部署入口（转调 deploy/install.sh）
+├── deploy/
+│   └── install.sh # 实际部署逻辑：装 Docker、建 .env、compose up --build
+├── .env.example   # 环境变量示例（复制为 .env 使用）
+├── .gitignore
 └── README.md
 ```
 
 ## 一键部署
 
-在目标服务器上执行（需已装 Docker + Compose）：
+克隆后在项目目录执行（需 root；未装 Docker 会自动安装）：
 
 ```bash
-curl -fsSL -o deploy.sh https://raw.githubusercontent.com/beiwang02/ssh-key-studio/main/deploy.sh
-sh deploy.sh
+git clone https://github.com/beiwang02/ssh-key-studio.git
+cd ssh-key-studio          # 注意：必须先进入仓库目录
+sudo bash install.sh
 ```
 
 或手动：
 
 ```bash
-git clone https://github.com/beiwang02/ssh-key-studio.git
-cd ssh-key-studio          # 注意：先进入仓库目录
-docker compose up -d
+cd ssh-key-studio
+cp .env.example .env       # 可改端口，默认 7788
+docker compose up -d --build
 ```
 
-- 脚本固定把代码部署到 **`/opt/stacks/ssh-key-studio/`**（可改脚本顶部 `APP_DIR`）
-- 部署后编排文件位置：`/opt/stacks/ssh-key-studio/compose.yml`
+- 部署目录固定为 **`/opt/stacks/ssh-key-studio/`**（改 `APP_DIR` 环境变量可换）
+- 部署后编排文件位置：`/opt/stacks/ssh-key-studio/compose.yaml`
 - 服务端口：**7788**，公网访问 `http://<服务器IP>:7788/`
 - 建议用本仓库的 GitHub Pages HTTPS 版本访问页面：<https://beiwang02.github.io/ssh-key-studio/>
