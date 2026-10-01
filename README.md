@@ -10,3 +10,36 @@
 - 不含分析、远程字体和网络 API 调用；静态页面及加密/ZIP 库已内联。
 
 本项目仅提供静态网页，不提供服务器 SSH 登录接口。
+
+## 仓库结构
+
+```
+ssh-key-studio/
+├── index.html     # 网页本体（单文件，加密/ZIP 库已内联）
+├── compose.yml    # Docker Compose 编排（对外 7788）
+├── nginx.conf     # 静态站点配置（含安全响应头）
+├── deploy.sh      # 一键部署脚本
+└── README.md
+```
+
+## 一键部署
+
+在目标服务器上执行（需已装 Docker + Compose）：
+
+```bash
+curl -fsSL -o deploy.sh https://raw.githubusercontent.com/beiwang02/ssh-key-studio/main/deploy.sh
+sh deploy.sh
+```
+
+或手动：
+
+```bash
+git clone https://github.com/beiwang02/ssh-key-studio.git
+cd ssh-key-studio          # 注意：先进入仓库目录
+docker compose up -d
+```
+
+- 脚本固定把代码部署到 **`/opt/stacks/ssh-key-studio/`**（可改脚本顶部 `APP_DIR`）
+- 部署后编排文件位置：`/opt/stacks/ssh-key-studio/compose.yml`
+- 服务端口：**7788**，公网访问 `http://<服务器IP>:7788/`
+- 建议用本仓库的 GitHub Pages HTTPS 版本访问页面：<https://beiwang02.github.io/ssh-key-studio/>
