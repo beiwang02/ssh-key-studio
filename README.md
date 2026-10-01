@@ -72,7 +72,7 @@ sudo bash install.sh
 
 ## 自动检查
 
-GitHub Actions 在 push 和 pull request 时执行：网页 JavaScript 语法/基础回归、部署脚本 Bash/ShellCheck 检查、Docker 镜像构建。
+计划启用 GitHub Actions（当前凭据缺少 workflow 权限，工作流尚未上传），届时在 push 和 pull request 时执行：网页 JavaScript 语法/基础回归、部署脚本 Bash/ShellCheck 检查、Docker 镜像构建。
 
 本地运行：
 
