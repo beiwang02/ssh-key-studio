@@ -961,7 +961,7 @@ function renderHistory() {
     const li = document.createElement("li");
     li.innerHTML = `
       <div class="grow">
-        <span class="name">${escapeHtml(k.name)}</span> <span class="tag">RSA ${escapeHtml(k.bits)}</span>${k.privateKey ? ' <span class="tag" style="background:var(--green);color:#fff">含私钥</span>' : ''}
+        <span class="name">${escapeHtml(k.name)}</span> <span class="tag">${escapeHtml(k.bits)}</span>${k.privateKey ? ' <span class="tag" style="background:var(--green);color:#fff">含私钥</span>' : ''}
         <div class="fp">${escapeHtml(k.fingerprint)}</div>
       </div>`;
     const bCopy = document.createElement("button");
@@ -1150,10 +1150,7 @@ async function handleImportedFiles(files) {
     }
 
     let finalPub, finalFp, finalPriv, type, comment, match = null;
-    let nameBase;
-    if (privFile) nameBase = safeName(privFile.name.replace(/\.[^.]*$/, "") || "imported");
-    else if (pubData) nameBase = safeName(pubData.comment.split("@")[0].replace(/[^A-Za-z0-9._-]/g, "") || "imported-pub");
-    else nameBase = "imported";
+    const nameBase = safeName((privFile ? privFile.name.replace(/\.[^.]*$/, "") : pubData.comment.split("@")[0].replace(/[^A-Za-z0-9._-]/g, "")) || "imported");
 
     if (derived && derived.openssh) {
       if (pubData && (pubData.type !== derived.type || pubData.key !== derived.publicKey)) throw new Error("公钥文件与 OpenSSH 私钥不匹配，请选择同一对密钥");
@@ -1175,7 +1172,7 @@ async function handleImportedFiles(files) {
 
     current = {
       name: nameBase,
-      bits: type === "ssh-ed25519" ? "Ed25519" : "导入",
+      bits: type === "ssh-rsa" ? "RSA" : "Ed25519",
       comment, type,
       publicKey: finalPub,
       privateKey: finalPriv || "（仅导入公钥，不含私钥）",
@@ -1254,8 +1251,6 @@ function parsePublicKeyLine(line) {
   const key = bytesToB64NoPad(bytes);
   return { type, key, comment, bytes, line: `${type} ${key} ${comment}` };
 }
-/* parsePublicKeyLine 仍被双文件导入使用 */
-
 /* ---------- 当前密钥操作 ---------- */
 $("btnCopyPub").addEventListener("click", () => copyText($("pubText").textContent, "公钥已复制"));
 $("btnCopyPriv").addEventListener("click", () => {
@@ -1314,12 +1309,17 @@ function renderProfiles() {
   });
   updateStats();
 }
-/* 导出配置文件（同原脚本格式：host/port/user/private_key，含私钥） */
+/* 导出配置文件（同原脚本格式：host/port/user/private_key，含私钥；校验指纹防同名误配） */
 function exportProfile(i) {
   const p = loadProfiles()[i];
   if (!p) return;
-  if (!current || current.savedOnly || current.name !== p.keyName) {
-    toast("请先在「生成」中生成/导入密钥「" + p.keyName + "」后再导出该配置");
+  if (!current || current.savedOnly || current.name !== p.keyName ||
+      (p.fingerprint && current.fingerprint !== p.fingerprint)) {
+    if (current && current.name === p.keyName && p.fingerprint && current.fingerprint !== p.fingerprint) {
+      toast("当前密钥与配置保存的不是同一把，请先在历史中载入对应密钥");
+    } else {
+      toast("请先在「生成」中生成/导入密钥「" + p.keyName + "」后再导出该配置");
+    }
     return;
   }
   const content = `host=${p.host}\nport=${p.port}\nuser=${p.user}\nprivate_key=\n${current.privateKey.trim()}\n`;
@@ -1353,7 +1353,7 @@ $("btnSaveProfile").addEventListener("click", () => {
   }
   const list = loadProfiles();
   const idx = list.findIndex(p => p.name === name);
-  const rec = { name, keyName, user, host, port, created: Date.now() };
+  const rec = { name, keyName, user, host, port, fingerprint: current ? current.fingerprint : "", created: Date.now() };
   if (idx >= 0) list[idx] = rec; else list.push(rec);
   saveStore(PF_STORE, list);
   renderProfiles();
