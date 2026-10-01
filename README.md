@@ -52,9 +52,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-- 部署目录：项目目录即部署目录（想放到别处可先 `mv` 或复制到 `/opt/stacks/`）
-- 服务端口：**7788**（改 `.env` 里的 `SSH_STUDIO_HOST_PORT` 可换），访问 `http://<服务器IP>:7788/`
-- 浏览器建议用本仓库的 GitHub Pages HTTPS 版本：<https://beiwang02.github.io/ssh-key-studio/>
+- 服务端口：**7788**（改 `.env` 里的 `SSH_STUDIO_HOST_PORT` 可换）
+- 常用命令：`docker compose ps` 查看状态，`docker compose logs -f ssh-key-studio` 查看日志
+- 建议用本仓库的 GitHub Pages HTTPS 版本访问页面：<https://beiwang02.github.io/ssh-key-studio/>
 
 > 自动化脚本方式（不想手动敲命令时）
 
@@ -64,10 +64,4 @@ cd ssh-key-studio
 sudo bash install.sh
 ```
 
-脚本会把代码部署到 `/opt/stacks/ssh-key-studio/`，自动创建 `.env` 并启动服务（未装 Docker 会自动安装）。
-```
-
-- 部署目录固定为 **`/opt/stacks/ssh-key-studio/`**（改 `APP_DIR` 环境变量可换）
-- 部署后编排文件位置：`/opt/stacks/ssh-key-studio/compose.yaml`
-- 服务端口：**7788**，公网访问 `http://<服务器IP>:7788/`
-- 建议用本仓库的 GitHub Pages HTTPS 版本访问页面：<https://beiwang02.github.io/ssh-key-studio/>
+脚本会把代码部署到 `/opt/stacks/ssh-key-studio/`，自动创建 `.env` 并启动服务（未装 Docker 会自动安装；改 `APP_DIR` 环境变量可换目录）。
