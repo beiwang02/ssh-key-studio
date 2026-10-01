@@ -65,3 +65,21 @@ sudo bash install.sh
 ```
 
 脚本会把代码部署到 `/opt/stacks/ssh-key-studio/`，自动创建 `.env` 并启动服务（未装 Docker 会自动安装；改 `APP_DIR` 环境变量可换目录）。
+
+## 许可证
+
+项目代码采用 [MIT License](LICENSE)。内联的 TweetNaCl、JSZip 等第三方组件保留各自许可，见 [`vendor/licenses/`](vendor/licenses/)。
+
+## 自动检查
+
+GitHub Actions 在 push 和 pull request 时执行：网页 JavaScript 语法/基础回归、部署脚本 Bash/ShellCheck 检查、Docker 镜像构建。
+
+本地运行：
+
+```bash
+node tests/smoke.cjs
+bash -n install.sh deploy/install.sh
+shellcheck install.sh deploy/install.sh
+```
+
+CI 是自动检查，不是自动部署，也不等于真机浏览器验收。
