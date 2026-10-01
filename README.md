@@ -70,9 +70,7 @@ sudo bash install.sh
 
 项目代码采用 [MIT License](LICENSE)。内联的 TweetNaCl、JSZip 等第三方组件保留各自许可，见 [`vendor/licenses/`](vendor/licenses/)。
 
-## 自动检查
-
-计划启用 GitHub Actions（当前凭据缺少 workflow 权限，工作流尚未上传），届时在 push 和 pull request 时执行：网页 JavaScript 语法/基础回归、部署脚本 Bash/ShellCheck 检查、Docker 镜像构建。
+## 本地检查
 
 本地运行：
 
@@ -82,4 +80,4 @@ bash -n install.sh deploy/install.sh
 shellcheck install.sh deploy/install.sh
 ```
 
-CI 是自动检查，不是自动部署，也不等于真机浏览器验收。
+本地检查不替代真机浏览器验收。
