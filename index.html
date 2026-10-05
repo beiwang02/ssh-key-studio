@@ -489,7 +489,7 @@ input[type=file][hidden] { display: none; }
       <div class="term-body" id="importCmd"></div>
       <button class="term-copy" id="btnCopyImport">复制命令</button>
     </div>
-    <p class="notice">先用现有方式登录服务器，在目标用户的终端执行此命令。这里只安装公钥；连接信息与私钥登录验证在下方单独完成。</p>
+    <p class="notice">先用现有方式登录服务器，在目标用户的终端执行此命令，将公钥安装到 authorized_keys。</p>
   </section>
 
   <!-- 步骤 4：连接配置 -->
@@ -529,7 +529,6 @@ input[type=file][hidden] { display: none; }
 
     <hr class="sep">
     <ul class="list" id="profileList"></ul>
-    <p class="notice">先在服务器安装公钥，再保存连接配置，最后点击对应记录的「验证登录」，填写实际 SSH 终端可读取的私钥路径并复制命令到终端执行。网页存有密钥不代表终端已有私钥文件；验证不修改配置，不回退到密码或键盘交互。首次验证可直接核对服务器主机指纹后确认。</p>
     <p class="empty hidden" id="pfEmpty">暂无连接配置。</p>
 
     <hr class="sep">
@@ -1219,15 +1218,6 @@ function downloadFile(name, content, mime) {
 function keyBaseName() {
   return current.imported ? `${current.name}_imported` : current.name;
 }
-/* ---------- 独立验证：仅生成命令，不保存配置 ---------- */
-function buildVerifyCommand(host, port, user, keyPath) {
-  if (!/^[A-Za-z0-9][A-Za-z0-9.:%_-]*$/.test(host) ||
-      !/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(user) ||
-      !/^\d+$/.test(String(port)) || !(Number(port) >= 1 && Number(port) <= 65535) ||
-      !keyPath.trim() || /[\r\n\0]/.test(keyPath)) throw new Error("请填写有效的服务器地址、端口、用户名和私钥路径");
-  const path = keyPath.startsWith("~/") ? '"$HOME"/' + shellQuote(keyPath.slice(2)) : shellQuote(keyPath);
-  return `chmod 600 -- ${path} && ssh -F /dev/null -i ${path} -p ${Number(port)} -l ${shellQuote(user)} -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=publickey -o PubkeyAuthentication=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o StrictHostKeyChecking=ask ${shellQuote(host)} 'printf "公钥登录验证成功，当前用户: "; whoami'`;
-}
 /* ---------- 公钥导入 ---------- */
 function parsePublicKeyLine(line) {
   const t = (line || "").trim();
@@ -1287,33 +1277,6 @@ function renderProfiles() {
         <span class="name">${escapeHtml(p.name)}</span> <span class="tag">${escapeHtml(p.keyName)}</span>
         <div class="fp">${escapeHtml(p.user)}@${escapeHtml(p.host)}:${escapeHtml(p.port)}</div>
       </div>`;
-    const bV = document.createElement("button");
-    bV.className = "btn mini ghost"; bV.textContent = "验证登录";
-    const panel = document.createElement("div");
-    panel.className = "grow hidden";
-    const label = document.createElement("label");
-    label.textContent = "本地 SSH 终端中的真实私钥路径";
-    const input = document.createElement("input");
-    input.type = "text"; input.autocomplete = "off"; input.spellcheck = false;
-    input.placeholder = "例如 ~/.ssh/" + p.keyName + "（须先放入私钥）";
-    label.appendChild(input);
-    const note = document.createElement("p");
-    note.className = "fp";
-    note.textContent = "网页保存密钥 ≠ 终端已有私钥文件。请先下载私钥并放入实际 SSH 终端可读取的位置，再填写路径；iOS Files/iCloud 文件须先导入 SSH 终端，不能直接当作 -i 路径。此路径仅用于本次验证，不保存或覆盖连接配置。首次连接请核对服务器主机指纹后确认。";
-    const copy = document.createElement("button");
-    copy.className = "btn mini ghost"; copy.textContent = "复制验证命令";
-    copy.disabled = true;
-    input.oninput = () => { copy.disabled = !input.value.trim(); };
-    copy.onclick = () => {
-      try {
-        copyText(buildVerifyCommand(p.host, p.port, p.user, input.value), "验证命令已复制（仅公钥认证，请在终端执行）");
-      } catch (e) { toast(e.message); }
-    };
-    panel.appendChild(label); panel.appendChild(note); panel.appendChild(copy);
-    bV.onclick = () => {
-      panel.classList.toggle("hidden");
-      if (!panel.classList.contains("hidden")) input.focus();
-    };
     const bE = document.createElement("button");
     bE.className = "btn mini ghost"; bE.textContent = "导出文档";
     bE.onclick = () => exportProfile(i);
@@ -1324,7 +1287,7 @@ function renderProfiles() {
       const l = loadProfiles(); l.splice(i, 1); saveStore(PF_STORE, l);
       renderProfiles(); updateStats();
     };
-    li.appendChild(bV); li.appendChild(bE); li.appendChild(bD); li.appendChild(panel);
+    li.appendChild(bE); li.appendChild(bD);
     ul.appendChild(li);
   });
   updateStats();
