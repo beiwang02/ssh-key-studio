@@ -474,46 +474,22 @@ input[type=file][hidden] { display: none; }
     </div>
   </section>
 
-  <!-- 步骤 3：命令 -->
+  <!-- 步骤 3：服务器安装公钥 -->
   <section class="card hidden" id="cardCommand">
     <div class="card-title">
       <span class="step-num">3</span>
-      <h3>使用命令</h3>
-      <span class="hint">一键复制</span>
+      <h3>服务器安装公钥</h3>
+      <span class="hint">在已登录的 VPS 执行</span>
     </div>
-
     <div class="term">
       <div class="term-bar">
         <i class="t-red"></i><i class="t-yellow"></i><i class="t-green"></i>
-        <span class="term-title">local — 一键安装公钥并验证登录（把 用户@服务器 换成你的）</span>
+        <span class="term-title">vps — 仅安装公钥到 authorized_keys</span>
       </div>
-      <div class="term-body" id="allCmd"></div>
-      <button class="term-copy" id="btnCopyAll">复制命令</button>
+      <div class="term-body" id="importCmd"></div>
+      <button class="term-copy" id="btnCopyImport">复制命令</button>
     </div>
-
-    <details style="margin-top:10px">
-      <summary><span class="chev">▼</span> 自动填密码（输入后命令自动带上，直接复制即可）</summary>
-      <div style="margin-top:12px">
-        <label for="sshPassInput">VPS 登录密码 <small>仅用于拼接命令，不保存不上传</small>
-          <input type="password" id="sshPassInput" placeholder="输入密码后上方命令自动更新" autocomplete="off" autocapitalize="off">
-        </label>
-        <p class="notice" style="margin-top:10px">输入后上方命令会变成 <code>sshpass -p '密码' …</code>。需本机装有 <code>sshpass</code>（iSH 终端执行 <code>apk add sshpass</code> 安装）。密码会进入剪贴板和终端历史，用完请及时清除输入框。</p>
-      </div>
-    </details>
-
-    <details style="margin-top:10px">
-      <summary><span class="chev">▼</span> 备选：在已登录的服务器终端里只安装公钥</summary>
-      <div class="term">
-        <div class="term-bar">
-          <i class="t-red"></i><i class="t-yellow"></i><i class="t-green"></i>
-          <span class="term-title">vps — 仅安装公钥到 authorized_keys</span>
-        </div>
-        <div class="term-body" id="importCmd"></div>
-        <button class="term-copy" id="btnCopyImport">复制命令</button>
-      </div>
-    </details>
-
-    <p class="notice">下载的私钥文件请执行 <code>chmod 600 文件名</code> 后再用于 <code>ssh -i</code>。一键命令需本机装有 <code>ssh-copy-id</code>（macOS/Linux/iSH 都有）。</p>
+    <p class="notice">先用现有方式登录服务器，在目标用户的终端执行此命令。这里只安装公钥；连接信息与私钥登录验证在下方单独完成。</p>
   </section>
 
   <!-- 步骤 4：连接配置 -->
@@ -553,6 +529,7 @@ input[type=file][hidden] { display: none; }
 
     <hr class="sep">
     <ul class="list" id="profileList"></ul>
+    <p class="notice">配置完成后，点击对应记录的「验证登录」复制独立验证命令，最后在本机终端执行。请将对应私钥放到 <code>~/.ssh/密钥名称</code>（与连接命令相同）；验证不会修改配置，也不回退到密码或键盘交互。首次连接请先用「连接命令」核对并信任服务器主机指纹。</p>
     <p class="empty hidden" id="pfEmpty">暂无连接配置。</p>
 
     <hr class="sep">
@@ -964,7 +941,7 @@ function renderCurrent() {
   $("pubText").textContent = publicLine();
   $("privText").textContent = current.privateKey;
   $("importCmd").textContent = importCommand(publicLine());
-  refreshAllCmd();
+
   const rev = $("btnReveal");
   $("privText").classList.add("priv-blur");
   rev.textContent = "👁 显示";
@@ -1033,7 +1010,7 @@ function loadRecord(i) {
     $("btnReveal").textContent = "👁 显示";
   }
   $("importCmd").textContent = importCommand(k.publicLine);
-  refreshAllCmd();
+
   $("cardCurrent").scrollIntoView({ behavior: "smooth", block: "start" });
   toast("已载入记录（公钥）");
 }
@@ -1213,7 +1190,7 @@ async function handleImportedFiles(files) {
     saveStore(KEY_STORE, keys);
     renderHistory(); renderProfiles(); refreshKeySelect(); updateStats();
     renderCurrent();
-    let msg = "✅ 密钥对已导入 · 已生成导入命令（见下方「使用命令」）";
+    let msg = "✅ 密钥对已导入 · 已生成导入命令（见下方「服务器安装公钥」）";
     if (match === "match") msg += " · 公钥与私钥匹配 ✓";
     else if (match === "mismatch") msg = "⚠ 已导入，但公钥文件与私钥不匹配，请确认文件是否同一对";
     setStatus($("importStatus"), msg, match === "mismatch" ? "err" : "ok");
@@ -1242,20 +1219,15 @@ function downloadFile(name, content, mime) {
 function keyBaseName() {
   return current.imported ? `${current.name}_imported` : current.name;
 }
-/* 一键命令：填了密码则自动用 sshpass 带上 */
-function refreshAllCmd() {
-  if (!current) return;
-  const kb = keyBaseName();
-  const pubfile = shellQuote(kb + ".pub");
-  const privfile = shellQuote(kb);
-  const base = `ssh-copy-id -i ${pubfile} 用户@服务器地址 && ssh -i ${privfile} -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no 用户@服务器地址 'printf "登录验证成功，当前用户: "; whoami'`;
-  const pw = $("sshPassInput").value;
-  $("allCmd").textContent = pw
-    ? `sshpass -p '${pw.replace(/'/g, `'\\''`)}' ${base}`
-    : base;
+/* ---------- 独立验证：仅生成命令，不保存配置 ---------- */
+function buildVerifyCommand(host, port, user, keyPath) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9.:%_-]*$/.test(host) ||
+      !/^[A-Za-z0-9_][A-Za-z0-9_.-]*$/.test(user) ||
+      !/^\d+$/.test(String(port)) || !(Number(port) >= 1 && Number(port) <= 65535) ||
+      !keyPath.trim() || /[\r\n\0]/.test(keyPath)) throw new Error("请填写有效的服务器地址、端口、用户名和私钥路径");
+  const path = keyPath.startsWith("~/") ? '"$HOME"/' + shellQuote(keyPath.slice(2)) : shellQuote(keyPath);
+  return `chmod 600 -- ${path} && ssh -F /dev/null -i ${path} -p ${Number(port)} -l ${shellQuote(user)} -o IdentitiesOnly=yes -o IdentityAgent=none -o PreferredAuthentications=publickey -o PubkeyAuthentication=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o BatchMode=yes ${shellQuote(host)} 'printf "公钥登录验证成功，当前用户: "; whoami'`;
 }
-$("sshPassInput").addEventListener("input", refreshAllCmd);
-
 /* ---------- 公钥导入 ---------- */
 function parsePublicKeyLine(line) {
   const t = (line || "").trim();
@@ -1301,7 +1273,6 @@ $("btnDownloadPair").addEventListener("click", () => {
   toast("密钥对已下载：公钥 + 私钥");
 });
 $("btnCopyImport").addEventListener("click", () => copyText($("importCmd").textContent, "导入命令已复制"));
-$("btnCopyAll").addEventListener("click", () => copyText($("allCmd").textContent, "一键命令已复制"));
 
 /* ---------- 连接配置 ---------- */
 function renderProfiles() {
@@ -1319,6 +1290,13 @@ function renderProfiles() {
     const bC = document.createElement("button");
     bC.className = "btn mini ghost"; bC.textContent = "连接命令";
     bC.onclick = () => copyText(`ssh -p ${p.port} -i ~/.ssh/${p.keyName} ${p.user}@${p.host}`, "连接命令已复制");
+    const bV = document.createElement("button");
+    bV.className = "btn mini ghost"; bV.textContent = "验证登录";
+    bV.onclick = () => {
+      try {
+        copyText(buildVerifyCommand(p.host, p.port, p.user, "~/.ssh/" + p.keyName), "验证命令已复制（仅公钥认证）");
+      } catch (e) { toast(e.message); }
+    };
     const bE = document.createElement("button");
     bE.className = "btn mini ghost"; bE.textContent = "导出文档";
     bE.onclick = () => exportProfile(i);
@@ -1329,7 +1307,7 @@ function renderProfiles() {
       const l = loadProfiles(); l.splice(i, 1); saveStore(PF_STORE, l);
       renderProfiles(); updateStats();
     };
-    li.appendChild(bC); li.appendChild(bE); li.appendChild(bD);
+    li.appendChild(bC); li.appendChild(bV); li.appendChild(bE); li.appendChild(bD);
     ul.appendChild(li);
   });
   updateStats();

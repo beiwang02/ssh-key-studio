@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),cp=require('node:child_process');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const main=[...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1];
+for(const old of ['sshpass','ssh-copy-id','sshPassInput','allCmd','btnCopyAll','cardVerify','verifyKeyPath']) assert(!html.includes(old),`removed ${old}`);
+assert(html.includes('服务器安装公钥'));assert(main.includes('bV.textContent = "验证登录"'));
+assert(main.includes('buildVerifyCommand(p.host, p.port, p.user, "~/.ssh/" + p.keyName)'));
+const c=vm.createContext({});
+for(const n of ['shellQuote','buildVerifyCommand']) vm.runInContext(main.match(new RegExp('function '+n+'\\([^]*?\\n\\}'))[0],c);
+const cmd=c.buildVerifyCommand('23.249.25.61',20058,'root','~/.ssh/jp');
+for(const flag of ['-F /dev/null','-p 20058',"-l 'root'",'IdentitiesOnly=yes','IdentityAgent=none','PreferredAuthentications=publickey','PubkeyAuthentication=yes','PasswordAuthentication=no','KbdInteractiveAuthentication=no','BatchMode=yes']) assert(cmd.includes(flag),flag);
+assert(cmd.includes('"$HOME"/\'.ssh/jp\''));assert(cmd.includes("'23.249.25.61'"));assert(!cmd.includes('authorized_keys'));
+cp.execFileSync('sh',['-n'],{input:cmd});
+const quoted=c.buildVerifyCommand('example.com',22,'test',"./a'b $(id)");cp.execFileSync('sh',['-n'],{input:quoted});assert(quoted.includes(c.shellQuote("./a'b $(id)")));
+for(const args of [['-oProxyCommand=evil',22,'root','a'],['example.com','22oops','root','a'],['example.com',0,'root','a'],['example.com',65536,'root','a'],['example.com',22,'root;id','a'],['example.com',22,'root','a\nb']]) assert.throws(()=>c.buildVerifyCommand(...args));
+console.log('PASS: removed old installation/password UI; per-profile independent publickey-only verification, actual endpoint/port/path, shell syntax and input validation.');
